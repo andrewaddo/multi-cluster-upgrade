@@ -16,6 +16,18 @@ The objective is to show that having multiple clusters allows the update to be d
 - **GKE Fleet**: Both clusters are registered to the same Fleet.
 - **Canary Rollout**: Traffic weighting via `HTTPRoute`.
 
+### Design Decision: DNS-based Routing
+This project uses **DNS as the primary router** to ensure zero downtime during the transition between a single-cluster Load Balancer and a Multi-cluster Gateway.
+
+**The Constraint:**
+In Google Cloud, a single Regional Static IP address cannot be shared simultaneously between an L4 Load Balancer (used in the baseline) and an L7 Multi-cluster Gateway. Attempting to move the IP would require deleting the first Load Balancer before the second can use it, causing minutes of downtime.
+
+**The Solution:**
+1.  **Baseline**: The single-cluster Load Balancer is provisioned with its own IP. DNS (e.g., `app.demo.gke`) is pointed to this IP.
+2.  **Overlap**: The Multi-cluster Gateway is provisioned with a *different* IP. At this stage, both endpoints are live and functional.
+3.  **The Switch**: DNS is updated to point to the Gateway IP. Because both endpoints are serving the same application, the transition is transparent to users, even as DNS caches propagate.
+4.  **Cleanup**: The old Load Balancer is decommissioned only after the DNS switch is complete.
+
 ## Project Structure
 - `app/`: Simple FastAPI application reporting cluster and version.
 - `infra/`: Modular `gcloud` infrastructure scripts.
@@ -53,7 +65,7 @@ Introduces the MCG and prepares for traffic shifting using version-specific serv
 Execute the traffic shift while running the load tester in another terminal.
 ```bash
 # Terminal 1: Load Tester
-python3 scripts/performance_test.py http://<GATEWAY_IP>/status --rps 5 --duration 0 --output migration_transition.csv
+python3 scripts/performance_test.py http://app.demo.gke/status --resolve app.demo.gke:<GATEWAY_IP> --rps 5 --duration 0 --output migration_transition.csv
 
 # Terminal 2: Operator
 ./demo_stages/04_canary_update.sh

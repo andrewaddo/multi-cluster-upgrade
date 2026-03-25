@@ -9,7 +9,23 @@ kubectl config use-context "gke_${PROJECT_ID}_${REGION}_cluster-old"
 echo "=== STAGE 4: Shifting Traffic to New GKE Version ==="
 
 echo "--> Current Status: 100% Old Cluster (v1.32), 0% New Cluster (v1.33)"
-echo "--> Step 1: 50/50 Traffic Split"
+
+echo "--> Step 0: Switch DNS to Gateway IP"
+GATEWAY_IP=$(kubectl get gateway external-http -o jsonpath='{.status.addresses[0].value}')
+BASELINE_IP=$(kubectl get svc gke-demo-svc-lb -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+
+echo "Gateway IP: $GATEWAY_IP"
+echo "Switching DNS: app.demo.gke -> $GATEWAY_IP"
+
+gcloud dns record-sets transaction start --zone=gke-demo-zone
+gcloud dns record-sets transaction remove "$BASELINE_IP" --name="app.demo.gke." --ttl=60 --type=A --zone=gke-demo-zone
+gcloud dns record-sets transaction add "$GATEWAY_IP" --name="app.demo.gke." --ttl=60 --type=A --zone=gke-demo-zone
+gcloud dns record-sets transaction execute --zone=gke-demo-zone
+
+echo "Waiting 60s for DNS TTL to expire..."
+sleep 60
+
+echo "--> Step 1: 50/50 Traffic Split (Within Gateway)"
 cat <<EOF | kubectl apply -f -
 kind: HTTPRoute
 apiVersion: gateway.networking.k8s.io/v1
@@ -34,10 +50,10 @@ spec:
       weight: 50
 EOF
 
-echo "Wait for traffic shift to take effect (approx. 60s)..."
+echo "Wait for traffic shift to take effect (approx. 45s)..."
 sleep 45
 
-echo "--> Step 2: 100% New Cluster"
+echo "--> Step 2: 100% New Cluster (Within Gateway)"
 cat <<EOF | kubectl apply -f -
 kind: HTTPRoute
 apiVersion: gateway.networking.k8s.io/v1
@@ -66,5 +82,5 @@ echo "--------------------------------------------------"
 echo "STAGE 4 COMPLETE"
 echo "Next Steps:"
 echo "1. Verify 100% traffic is on cluster-new."
-echo "2. Run final performance report: python3 scripts/performance_test.py http://<GATEWAY_IP>/status --output stage4_post_update.csv"
+echo "2. Run final performance report: python3 scripts/performance_test.py http://app.demo.gke/status --resolve app.demo.gke:\$GATEWAY_IP --output stage4_post_update.csv"
 echo "--------------------------------------------------"

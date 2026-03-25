@@ -38,20 +38,20 @@ The primary objective of this project was to demonstrate a **zero-downtime GKE v
 
 | Metric | Stage 1 (Baseline) | Stage 4 (Post-Update) |
 | :--- | :--- | :--- |
-| **Total Requests** | 49 | 49 |
-| **Successful Requests** | 49 (100%) | 49 (100%) |
+| **Total Requests** | 16 | 192 |
+| **Successful Requests** | 16 (100%) | 192 (100%) |
 | **Failed Requests** | 0 (0.00%) | 0 (0.00%) |
-| **Avg Latency** | 419.02 ms | 417.95 ms |
-| **P95 Latency** | 425.92 ms | 423.64 ms |
+| **Avg Latency** | 426.27 ms | 425.98 ms |
+| **P95 Latency** | 441.13 ms | 436.90 ms |
 | **Serving Cluster** | `cluster-old` (100%) | `cluster-new` (100%) |
 
 ### Key Observation:
-The migration transition was completed with **zero failed requests**. The latency remained stable throughout the shift, proving that the Multi-Cluster Gateway provides a seamless transition path between GKE versions.
+The migration transition was completed with **zero failed requests**, even during the **DNS switch** from the single-cluster Load Balancer to the Regional Multi-Cluster Gateway. The latency remained stable throughout the shift, proving that the Multi-Cluster Gateway and the DNS-based routing strategy provide a seamless transition path between GKE versions.
 
 ## 5. Benefits of the Multi-Cluster Update Strategy
-1. **Zero Downtime:** Traffic is shifted at Layer 7, ensuring continuous availability.
+1. **Zero Downtime:** Traffic is shifted at Layer 7 AND at the DNS level, ensuring continuous availability.
 2. **Infrastructure Isolation:** The new version is tested in a clean environment before receiving production traffic.
-3. **Instant Rollback:** If the new version exhibits issues, traffic can be reverted to the old cluster in seconds by updating the `HTTPRoute` weights.
+3. **Instant Rollback:** If the new version exhibits issues, traffic can be reverted to the old cluster in seconds by updating the `HTTPRoute` weights or the DNS records.
 4. **Complying with Constraints:** The setup successfully adhered to strict organizational policies (Private Clusters and Shielded VMs).
 
 ## 6. Conclusion

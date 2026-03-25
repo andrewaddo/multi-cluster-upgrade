@@ -23,6 +23,16 @@ gcloud compute networks subnets delete gke-proxy-only-subnet --region "$REGION" 
 echo "--> Deleting VPC Network"
 gcloud compute networks delete "$NETWORK" --quiet || true
 
+echo "--> Deleting Cloud DNS Managed Zone"
+gcloud dns record-sets transaction start --zone=gke-demo-zone || true
+# Get the A record IP to remove
+GATEWAY_IP=$(gcloud dns record-sets list --zone=gke-demo-zone --name="app.demo.gke." --type=A --format="value(rrdatas[0])" || true)
+if [[ -n "$GATEWAY_IP" ]]; then
+    gcloud dns record-sets transaction remove "$GATEWAY_IP" --name="app.demo.gke." --ttl=60 --type=A --zone=gke-demo-zone || true
+    gcloud dns record-sets transaction execute --zone=gke-demo-zone || true
+fi
+gcloud dns managed-zones delete gke-demo-zone --quiet || true
+
 echo "--------------------------------------------------"
 echo "STAGE 5 COMPLETE"
 echo "Project cleaned up successfully."

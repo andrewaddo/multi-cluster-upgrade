@@ -29,3 +29,9 @@ gcloud compute networks subnets create gke-proxy-only-subnet \
     --network="$NETWORK_NAME" \
     --range=10.2.0.0/23 \
     --region="$REGION" || true
+
+echo "--> Creating Cloud DNS Managed Zone for app.demo.gke"
+gcloud dns managed-zones create gke-demo-zone \
+    --dns-name="demo.gke." \
+    --description="Demo Zone for Multi-Cluster Gateway" \
+    --visibility=public || true

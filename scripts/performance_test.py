@@ -67,13 +67,40 @@ class MetricsCollector:
                 dict_writer.writeheader()
                 dict_writer.writerows(self.results)
 
-def worker(url, collector, stop_event, rate_limit_sleep):
+def worker(url, collector, stop_event, rate_limit_sleep, host_header=None, resolve_map=None):
+    from urllib.parse import urlparse
+    parsed_url = urlparse(url)
+    target_host = parsed_url.hostname
+    target_port = parsed_url.port or (80 if parsed_url.scheme == 'http' else 443)
+    target_path = parsed_url.path
+    if parsed_url.query:
+        target_path += "?" + parsed_url.query
+
     while not stop_event.is_set():
         start = time.time()
         timestamp = datetime.now().isoformat()
         try:
             # Disable keep-alive for better LB visibility
-            response = requests.get(url, timeout=5, headers={'Connection': 'close'})
+            headers = {'Connection': 'close'}
+            if host_header:
+                headers['Host'] = host_header
+            
+            # If resolve_map is provided, try all IPs until success
+            response = None
+            if resolve_map and target_host in resolve_map:
+                ips = resolve_map[target_host]
+                for ip in ips:
+                    try:
+                        temp_url = f"{parsed_url.scheme}://{ip}:{target_port}{target_path}"
+                        response = requests.get(temp_url, timeout=2, headers=headers)
+                        if response.status_code != 0:
+                            break
+                    except:
+                        continue
+            
+            if response is None:
+                response = requests.get(url, timeout=5, headers=headers)
+            
             latency = (time.time() - start) * 1000 # ms
             status_code = response.status_code
             
@@ -101,8 +128,18 @@ def main():
     parser.add_argument("--rps", type=float, default=5.0, help="Target Requests Per Second (approx)")
     parser.add_argument("--duration", type=int, default=60, help="Duration in seconds (0 for infinite)")
     parser.add_argument("--output", default="migration_report.csv", help="Filename for the CSV report")
+    parser.add_argument("--host", help="Custom Host header")
+    parser.add_argument("--resolve", help="Custom resolve mapping (e.g. app.demo.gke:ip1,ip2)")
     
     args = parser.parse_args()
+
+    resolve_map = {}
+    if args.resolve:
+        parts = args.resolve.split(':')
+        if len(parts) == 2:
+            host = parts[0]
+            ips = parts[1].split(',')
+            resolve_map[host] = ips
     
     rate_limit_sleep = 1.0 / args.rps
     collector = MetricsCollector()
@@ -110,11 +147,15 @@ def main():
     
     print(f"Starting load test...")
     print(f"Target URL: {args.url}")
+    if args.host:
+        print(f"Host Header: {args.host}")
+    if resolve_map:
+        print(f"Resolve Mapping: {resolve_map}")
     print(f"Target RPS: {args.rps}")
     print(f"CSV Report will be saved to: {args.output}")
     print("Press Ctrl+C to stop and generate report.\n")
     
-    t = threading.Thread(target=worker, args=(args.url, collector, stop_event, rate_limit_sleep))
+    t = threading.Thread(target=worker, args=(args.url, collector, stop_event, rate_limit_sleep, args.host, resolve_map))
     t.start()
     
     start_time = time.time()

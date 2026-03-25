@@ -42,9 +42,24 @@ kubectl apply -f k8s/rendered/deploy-old.yaml
 kubectl apply -f k8s/app/service.yaml
 kubectl apply -f k8s/app/service-lb.yaml
 
+echo "--> Waiting for Baseline External IP..."
+while true; do
+  BASELINE_IP=$(kubectl get svc gke-demo-svc-lb -o jsonpath='{.status.loadBalancer.ingress[0].ip}' || true)
+  if [[ -n "$BASELINE_IP" ]]; then
+    echo "Found Baseline IP: $BASELINE_IP"
+    break
+  fi
+  echo "Waiting..."
+  sleep 10
+done
+
+echo "--> Updating DNS record for app.demo.gke -> $BASELINE_IP"
+gcloud dns record-sets transaction start --zone=gke-demo-zone
+gcloud dns record-sets transaction add "$BASELINE_IP" --name="app.demo.gke." --ttl=60 --type=A --zone=gke-demo-zone
+gcloud dns record-sets transaction execute --zone=gke-demo-zone
+
 echo "--------------------------------------------------"
 echo "STAGE 1 COMPLETE"
 echo "Next Steps:"
-echo "1. Wait for External IP: kubectl get svc gke-demo-svc-lb"
-echo "2. Run baseline test: python3 scripts/performance_test.py http://<EXTERNAL_IP>/status --output stage1_baseline.csv"
+echo "1. Run baseline test: python3 scripts/performance_test.py http://app.demo.gke/status --resolve app.demo.gke:\$BASELINE_IP --output stage1_baseline.csv"
 echo "--------------------------------------------------"
