@@ -1,0 +1,21 @@
+kind: HTTPRoute
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: gke-demo-route
+  namespace: default
+spec:
+  parentRefs:
+  - name: external-http
+    namespace: default
+  rules:
+  - backendRefs:
+    - group: net.gke.io
+      kind: ServiceImport
+      name: gke-demo-svc-v129
+      port: 80
+      weight: 100
+    - group: net.gke.io
+      kind: ServiceImport
+      name: gke-demo-svc-v130
+      port: 80
+      weight: 0

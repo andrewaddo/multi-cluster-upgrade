@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: gke-demo-svc-v130
+  namespace: default
+spec:
+  selector:
+    app: gke-demo-app
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080
+  type: ClusterIP
+---
+kind: ServiceExport
+apiVersion: net.gke.io/v1
+metadata:
+  name: gke-demo-svc-v130
+  namespace: default

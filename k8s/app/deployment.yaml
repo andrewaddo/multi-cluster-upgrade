@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gke-demo-app
+  namespace: default
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: gke-demo-app
+  template:
+    metadata:
+      labels:
+        app: gke-demo-app
+    spec:
+      containers:
+      - name: app
+        image: gcr.io/PROJECT_ID/gke-demo-app:v1
+        ports:
+        - containerPort: 8080
+        env:
+        - name: CLUSTER_NAME
+          value: CLUSTER_NAME_VAL
+        - name: APP_VERSION
+          value: "v1.0.0"
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
