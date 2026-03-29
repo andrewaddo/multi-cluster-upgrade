@@ -8,7 +8,8 @@ The objective is to show that having multiple clusters allows the upgrade to be 
 2.  **Stage 2: Expansion (v1.33)**: Secondary cluster running the new version.
 3.  **Stage 3: Gateway Setup**: Introduce Multi-Cluster Gateway for traffic management.
 4.  **Stage 4: Canary Upgrade**: Shift traffic from v1.32 to v1.33.
-5.  **Stage 5: Post-Migration Cleanup**: Settle on the new version and decommission the old.
+5.  **Stage 5: Solidify on Single Cluster**: Revert from MCG to a simple single-cluster L4 Load Balancer.
+6.  **Stage 6: Cleanup**: Final teardown of all resources.
 
 ## Architecture
 - **Two GKE Standard Clusters**: Both in `us-central1`.
@@ -115,17 +116,34 @@ python3 scripts/performance_test.py http://app.demo.gke/status --resolve app.dem
 ./demo_stages/04_canary_upgrade.sh
 ```
 
-### 5. Cleanup
+### 5. Solidify on Single Cluster
+Reverts from the Multi-Cluster Gateway to a standard L4 Load Balancer on the new cluster for simplicity.
 
 ```mermaid
 flowchart LR
     U(Users) --> D[DNS: app.demo.gke]
-    D --> GW[Multi-Cluster Gateway]
-    GW --> C2[Cluster New: v1.33]
+    D --> LB[Standard LB]
+    LB --> C2[Cluster New: v1.33]
 ```
 ```bash
-./demo_stages/05_cleanup.sh
+./demo_stages/05_solidify_single_cluster.sh
 ```
+
+### 6. Cleanup
+Final teardown of the demonstration infrastructure.
+```bash
+./demo_stages/06_cleanup.sh
+```
+
+## Architectural Decision: Post-Upgrade State (MCG vs. Single-Cluster)
+After the upgrade, you must decide whether to keep the Multi-Cluster Gateway or revert to a simpler single-cluster setup.
+
+| Feature | Keep Multi-Cluster Gateway (MCG) | Revert to Single-Cluster LB |
+| :--- | :--- | :--- |
+| **Next Upgrade** | **Ready.** The next upgrade cycle is already automated. | **Manual.** Setup must be repeated for the next version. |
+| **Availability** | **High.** Ready for multi-zone/multi-region HA. | **Standard.** Limited to single cluster availability. |
+| **Complexity** | **Medium.** Requires GKE Fleet and MCS API. | **Low.** Standard Kubernetes Service/Ingress patterns. |
+| **Cost** | **Higher.** L7 MCG has more overhead than a basic L4 LB. | **Lower.** Standard L4 LBs are more cost-effective. |
 
 ## Benefits of this Approach
 - **Zero Downtime**: Traffic is shifted at the load balancer level.
