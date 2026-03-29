@@ -4,3 +4,4 @@
 __pycache__/
 *.pyc
 k8s/rendered/
+blog.md
