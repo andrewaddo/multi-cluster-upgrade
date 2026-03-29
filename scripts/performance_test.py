@@ -123,7 +123,7 @@ def worker(url, collector, stop_event, rate_limit_sleep, host_header=None, resol
         time.sleep(rate_limit_sleep)
 
 def main():
-    parser = argparse.ArgumentParser(description="Performance Load Tester for GKE Version Update")
+    parser = argparse.ArgumentParser(description="Performance Load Tester for GKE Version Upgrade")
     parser.add_argument("url", help="Target URL (e.g. http://<gateway-ip>/status)")
     parser.add_argument("--rps", type=float, default=5.0, help="Target Requests Per Second (approx)")
     parser.add_argument("--duration", type=int, default=60, help="Duration in seconds (0 for infinite)")

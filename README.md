@@ -1,13 +1,13 @@
-# GKE Version Update with Multi-Cluster Gateway
+# GKE Version Upgrade with Multi-Cluster Gateway
 
-This project demonstrates a zero-downtime, low-risk GKE version update within a single region (`us-central1`) by using multiple clusters and a Regional Multi-Cluster Gateway (MCG). It follows the template from `multi-cluster-region-migration`.
+This project demonstrates a zero-downtime, low-risk GKE version upgrade within a single region (`us-central1`) by using multiple clusters and a Regional Multi-Cluster Gateway (MCG). It follows the template from `multi-cluster-region-migration`.
 
 ## Objective
-The objective is to show that having multiple clusters allows the update to be done with minimal downtime and minimal risk of disruption.
+The objective is to show that having multiple clusters allows the upgrade to be done with minimal downtime and minimal risk of disruption.
 1.  **Stage 1: Baseline (v1.32)**: Primary cluster running the old version.
 2.  **Stage 2: Expansion (v1.33)**: Secondary cluster running the new version.
 3.  **Stage 3: Gateway Setup**: Introduce Multi-Cluster Gateway for traffic management.
-4.  **Stage 4: Canary Update**: Shift traffic from v1.32 to v1.33.
+4.  **Stage 4: Canary Upgrade**: Shift traffic from v1.32 to v1.33.
 5.  **Stage 5: Post-Migration Cleanup**: Settle on the new version and decommission the old.
 
 ## Architecture
@@ -68,14 +68,14 @@ Introduces the MCG and prepares for traffic shifting using version-specific serv
 ./demo_stages/03_setup_gateway.sh
 ```
 
-### 4. Perform Canary Update
+### 4. Perform Canary Upgrade
 Execute the traffic shift while running the load tester in another terminal.
 ```bash
 # Terminal 1: Load Tester
 python3 scripts/performance_test.py http://app.demo.gke/status --resolve app.demo.gke:<GATEWAY_IP> --rps 5 --duration 0 --output migration_transition.csv
 
 # Terminal 2: Operator
-./demo_stages/04_canary_update.sh
+./demo_stages/04_canary_upgrade.sh
 ```
 
 ### 5. Cleanup
@@ -85,6 +85,6 @@ python3 scripts/performance_test.py http://app.demo.gke/status --resolve app.dem
 
 ## Benefits of this Approach
 - **Zero Downtime**: Traffic is shifted at the load balancer level.
-- **Risk Mitigation**: The old cluster remains untouched during the update.
+- **Risk Mitigation**: The old cluster remains untouched during the upgrade.
 - **Instant Rollback**: If issues are detected, traffic can be shifted back immediately.
 - **Isolation**: New version features can be tested in isolation before any traffic shift.

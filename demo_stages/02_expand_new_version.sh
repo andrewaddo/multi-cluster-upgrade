@@ -8,7 +8,7 @@ CLUSTER_NEW="cluster-new"
 VERSION_NEW="1.33.9-gke.1117000"
 NETWORK="gke-multi-cluster-vpc"
 
-echo "=== STAGE 2: Provisioning Updated GKE Cluster (v1.33) ==="
+echo "=== STAGE 2: Provisioning Upgraded GKE Cluster (v1.33) ==="
 
 # Setup GKE New
 ./infra/setup_gke.sh "$CLUSTER_NEW" "$REGION" "$NETWORK" "gke-subnet-new" "$VERSION_NEW" "172.16.0.16/28"
